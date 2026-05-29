@@ -1,0 +1,17 @@
+{
+  "name": "ai-code-review-agent-root",
+  "version": "1.0.0",
+  "description": "Root workspace to start the AI Code Review Agent backend and frontend services.",
+  "scripts": {
+    "install:all": "npm install && npm run install:backend && npm run install:frontend",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start": "concurrently \"cd backend && npm start\" \"cd frontend && npm run preview\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

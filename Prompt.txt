@@ -1,0 +1,369 @@
+# AI Code Review Agent — Full Project Generation Prompt
+
+Build a production-level AI Code Review Agent using the MERN stack with real-time streaming, GitHub OAuth, Redis queues, and multi-agent AI architecture.
+
+The application should look modern, developer-focused, scalable, and production-ready.
+
+---
+
+# Tech Stack
+
+Frontend:
+
+* React.js
+* Tailwind CSS
+* React Router
+* Axios
+* Monaco Editor
+* Framer Motion
+
+Backend:
+
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT Authentication
+* Passport.js GitHub OAuth
+
+AI:
+
+* OpenAI API or Claude API
+* Structured prompt engineering
+* Multi-agent architecture
+
+Real-time:
+
+* Server Sent Events (SSE)
+
+Queue System:
+
+* Redis
+* BullMQ
+
+Deployment Ready:
+
+* Environment variables
+* Modular architecture
+* Clean scalable folder structure
+
+---
+
+# Core Features
+
+## Authentication
+
+Implement:
+
+* GitHub OAuth login using Passport.js
+* JWT token authentication
+* Protected routes
+* User session handling
+
+---
+
+# Repository Review System
+
+Users should be able to:
+
+* Paste GitHub repository URLs
+* Upload code files
+* Paste raw code directly
+
+Backend should:
+
+* Clone GitHub repositories temporarily
+* Scan project files
+* Extract relevant code files
+* Ignore node_modules and unnecessary folders
+
+---
+
+# Multi-Agent AI Review System
+
+Create multiple AI agents:
+
+1. Security Agent
+
+* Detect secrets
+* JWT vulnerabilities
+* Mongo injection risks
+* Unsafe eval usage
+* Hardcoded credentials
+
+2. Performance Agent
+
+* Detect unnecessary re-renders
+* Expensive loops
+* Memory leaks
+* Bad async handling
+
+3. Clean Code Agent
+
+* Naming issues
+* Code duplication
+* Readability problems
+* Best practice violations
+
+4. Architecture Agent
+
+* Folder structure analysis
+* Separation of concerns
+* Component reusability
+* API architecture review
+
+5. Summary Agent
+
+* Generate final overall review
+* Create quality scores
+* Summarize major issues
+
+---
+
+# AI Review Output
+
+Return structured JSON:
+
+{
+"security": 85,
+"performance": 78,
+"cleanCode": 92,
+"architecture": 81,
+"overall": 84,
+"issues": [],
+"suggestions": [],
+"summary": ""
+}
+
+---
+
+# Real-Time Streaming
+
+Use Server Sent Events (SSE).
+
+Frontend should receive live updates such as:
+
+* Cloning repository...
+* Scanning files...
+* Running security analysis...
+* Running performance checks...
+* Generating final report...
+
+Display streaming updates in real-time on UI.
+
+---
+
+# Redis Queue System
+
+Use BullMQ with Redis.
+
+Flow:
+
+* User submits review request
+* Backend pushes job into Redis queue
+* Worker processes repository
+* Worker sends streaming updates through SSE
+* Final report saved into MongoDB
+
+---
+
+# Dashboard Features
+
+Create a developer dashboard showing:
+
+* Previous reviews
+* Review history
+* Repository list
+* Quality score trends
+* Recent security issues
+
+---
+
+# Frontend Requirements
+
+Create beautiful modern UI.
+
+Pages:
+
+* Landing Page
+* Login Page
+* Dashboard
+* Repository Review Page
+* Review Results Page
+
+Components:
+
+* Navbar
+* Sidebar
+* Monaco Code Editor
+* Live Streaming Console
+* Quality Score Cards
+* Charts
+* AI Suggestions Panel
+
+Use:
+
+* Tailwind CSS
+* Responsive design
+* Dark mode
+* Smooth animations with Framer Motion
+
+---
+
+# Backend Requirements
+
+Use modular architecture.
+
+Folder Structure:
+
+backend/
+│
+├── controllers/
+├── routes/
+├── middleware/
+├── models/
+├── services/
+│   ├── ai/
+│   ├── github/
+│   ├── streaming/
+├── queues/
+├── workers/
+├── config/
+├── utils/
+├── server.js
+
+---
+
+# Frontend Folder Structure
+
+frontend/
+│
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── hooks/
+│   ├── services/
+│   ├── context/
+│   ├── utils/
+│   ├── App.jsx
+│   ├── main.jsx
+
+---
+
+# Database Models
+
+Create models for:
+
+User
+
+* githubId
+* username
+* avatar
+* email
+
+Repository
+
+* repoName
+* repoUrl
+* owner
+
+Review
+
+* userId
+* repositoryId
+* securityScore
+* performanceScore
+* cleanCodeScore
+* architectureScore
+* overallScore
+* issues
+* suggestions
+* summary
+* createdAt
+
+---
+
+# SSE Implementation
+
+Create reusable SSE manager.
+
+Features:
+
+* open stream
+* send updates
+* close stream safely
+* support multiple users
+
+---
+
+# AI Prompt Engineering
+
+Each AI agent should use separate prompts.
+
+Security prompt example:
+"Analyze this code for vulnerabilities, secrets, unsafe patterns, and authentication flaws."
+
+Performance prompt example:
+"Analyze this code for performance bottlenecks, re-render issues, expensive operations, and scalability concerns."
+
+---
+
+# GitHub Integration
+
+Implement:
+
+* Fetch user repositories
+* Clone repositories
+* Scan files recursively
+* Ignore node_modules
+* Support JS, TS, JSX, TSX
+
+---
+
+# Important Requirements
+
+* Write clean scalable code
+* Use async/await everywhere
+* Add proper error handling
+* Use environment variables
+* Add loading states
+* Add empty states
+* Add reusable hooks
+* Add reusable utility functions
+
+---
+
+# Additional Advanced Features
+
+If possible also include:
+
+* Pull Request review bot
+* AI-generated fix suggestions
+* Markdown review export
+* Downloadable PDF report
+* Repo search
+* AI chat assistant for code explanation
+
+---
+
+# UI Design Style
+
+Design should look similar to:
+
+* Cursor IDE
+* Linear
+* Vercel Dashboard
+* GitHub Dark UI
+
+Use:
+
+* glassmorphism
+* gradients
+* modern cards
+* developer-focused interface
+
+---
+
+# Final Goal
+
+The final project should feel like a real SaaS AI developer tool and be fully scalable, modular, production-ready, and impressive for recruiters.

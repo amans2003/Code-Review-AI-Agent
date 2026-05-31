@@ -1,6 +1,6 @@
-# Antigravity Review — Multi-Agent AI Code Auditor
+# AI Code Review Agent — Multi-Agent AI Code Auditor
 
-Antigravity Review is a production-grade code auditing console built with the MERN stack (MongoDB, Express, React, Node.js). It supports multi-agent static/LLM reviews, real-time logging via Server-Sent Events (SSE), and features a premium developer dashboard inspired by Cursor IDE and Vercel.
+AI Code Review Agent is a production-grade code auditing console built with the MERN stack (MongoDB, Express, React, Node.js). It supports multi-agent static/LLM reviews, real-time logging via Server-Sent Events (SSE), and features a premium developer dashboard inspired by Cursor IDE and Vercel.
 
 ## 🚀 Key Features
 

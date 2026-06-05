@@ -26,7 +26,10 @@ router.get('/github', (req, res, next) => {
 // Route: GitHub OAuth Callback
 router.get(
   '/github/callback',
-  passport.authenticate('github', { failureRedirect: 'http://localhost:5173/login?error=auth_failed', session: false }),
+  (req, res, next) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    passport.authenticate('github', { failureRedirect: `${frontendUrl}/login?error=auth_failed`, session: false })(req, res, next);
+  },
   githubCallback
 );
 

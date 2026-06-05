@@ -35,7 +35,10 @@ const ReviewPage = () => {
     setErrorMsg('');
     setJobId(id);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    if (API_URL.endsWith('/')) {
+      API_URL = API_URL.slice(0, -1);
+    }
     const streamUrl = `${API_URL}/api/stream/${id}`;
     const source = new EventSource(streamUrl);
     eventSourceRef.current = source;

@@ -35,7 +35,12 @@ const ResultsPage = () => {
           
           // Reconstruct files list from issues list if missing (for legacy records)
           if (!data.files || data.files.length === 0) {
-            const uniqueFiles = [...new Set(data.issues.map(i => i.file))];
+            // Use a Map for O(N) lookup instead of nested filter per file
+            const fileMap = new Map();
+            data.issues.forEach(i => {
+              if (!fileMap.has(i.file)) fileMap.set(i.file, true);
+            });
+            const uniqueFiles = [...fileMap.keys()];
             data.files = uniqueFiles.map(filePath => ({
               path: filePath,
               content: `// Source code content for ${filePath} is unavailable for legacy reports.\n// Please run a new audit scan to enable inline editor highlights and AI chat.`

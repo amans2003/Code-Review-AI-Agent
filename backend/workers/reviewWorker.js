@@ -19,7 +19,6 @@ const performReviewJob = async (jobId, data) => {
   let filesToReview = [];
 
   try {
-    console.log(`Worker: Starting review job ${jobId}`);
     sseManager.send(jobId, 'started', 'Initializing analysis parameters...');
 
     if (repoUrl) {
@@ -70,8 +69,8 @@ const performReviewJob = async (jobId, data) => {
 
     await newReview.save();
 
-    console.log(`Worker: Job ${jobId} finished successfully! Saved Review ID: ${newReview._id}`);
     sseManager.send(jobId, 'completed', {
+
       reviewId: newReview._id,
       scores: {
         security: reviewData.securityScore,
@@ -97,8 +96,8 @@ const performReviewJob = async (jobId, data) => {
 
 // 1. Hook up local in-memory Queue processing listener
 reviewQueueController.localQueue.on('process', async (job) => {
-  console.log(`Worker: Processing in-memory job: ${job.id}`);
   await performReviewJob(job.id, job.data);
+
 });
 
 // 2. Hook up BullMQ worker if Redis client gets connected
@@ -116,14 +115,11 @@ const setupBullWorker = () => {
     connectTimeout: 2000,
     retryStrategy: () => null // Don't loop infinitely if offline
   });
-
   connection.on('connect', () => {
-    console.log('Worker connected to Redis. Starting BullMQ Worker loop.');
     bullWorker = new Worker('review-queue', async (job) => {
-      console.log(`Worker: Processing BullMQ job: ${job.id}`);
       await performReviewJob(job.id, job.data);
     }, { connection });
-    
+
     bullWorker.on('failed', (job, err) => {
       console.error(`BullMQ Worker: Job ${job.id} failed:`, err);
     });

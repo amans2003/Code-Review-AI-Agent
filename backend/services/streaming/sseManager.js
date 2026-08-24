@@ -21,7 +21,6 @@ class SSEManager {
 
     this.clients.set(jobId, res);
 
-    // Keep connection alive with a ping every 30 seconds
     const keepAliveInterval = setInterval(() => {
       if (this.clients.has(jobId)) {
         res.write(': ping\n\n');
@@ -37,8 +36,6 @@ class SSEManager {
         this.unregister(jobId);
       });
     }
-
-    console.log(`SSE Client registered for job: ${jobId}`);
   }
 
   /**
@@ -50,8 +47,8 @@ class SSEManager {
   send(jobId, status, message) {
     const res = this.clients.get(jobId);
     if (!res) {
-      console.log(`SSE: No client registered for job: ${jobId} (Message: ${status} - ${JSON.stringify(message).substring(0, 60)})`);
       return;
+
     }
 
     const payload = {
@@ -77,7 +74,6 @@ class SSEManager {
         // Already closed
       }
       this.clients.delete(jobId);
-      console.log(`SSE Client unregistered for job: ${jobId}`);
     }
   }
 }

@@ -46,9 +46,7 @@ const loginWithGithubUrl = async (req, res) => {
         message: 'Could not extract a GitHub username from the URL. Use format: https://github.com/username'
       });
     }
-
     const githubUsername = match[1];
-    console.log(`[auth/github-url] Attempting login for GitHub user: ${githubUsername}`);
 
     // ── Step 2: Fetch from GitHub public API ───────────────────────────────
     let githubProfile;
@@ -58,7 +56,6 @@ const loginWithGithubUrl = async (req, res) => {
         { headers: githubHeaders(), timeout: 10000 }
       );
       githubProfile = response.data;
-      console.log(`[auth/github-url] GitHub profile fetched: login=${githubProfile.login}`);
     } catch (axiosErr) {
       const status = axiosErr.response?.status;
       console.error(`[auth/github-url] GitHub API error: status=${status}, msg=${axiosErr.message}`);
@@ -98,7 +95,6 @@ const loginWithGithubUrl = async (req, res) => {
         },
         { upsert: true, new: true, runValidators: true }
       );
-      console.log(`[auth/github-url] User record ready: id=${user._id}, username=${user.username}`);
     } catch (dbErr) {
       console.error('[auth/github-url] Database error:', dbErr.message, dbErr.code);
       return res.status(500).json({

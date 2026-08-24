@@ -51,5 +51,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server executing in production mode on port ${PORT}`);
+  process.stdout.write(`[Server] Running on port ${PORT}\n`);
 });

@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/ai-code-reviewer');
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // Startup confirmation — use process.stderr for structured environments
+    process.stdout.write(`[DB] Connected: ${conn.connection.host}\n`);
 
     // Drop legacy indexes that may conflict with the updated schema
     try {
@@ -13,7 +14,6 @@ const connectDB = async () => {
         for (const idxName of indexesToDrop) {
           try {
             await mongoose.connection.db.collection('users').dropIndex(idxName);
-            console.log(`Database: Dropped legacy index "${idxName}".`);
           } catch (idxErr) {
             // IndexNotFound is expected if the index never existed — safe to ignore
             if (idxErr.codeName !== 'IndexNotFound' && idxErr.code !== 27) {

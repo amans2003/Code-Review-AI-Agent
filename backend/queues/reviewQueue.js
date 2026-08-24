@@ -45,7 +45,6 @@ class ReviewQueueController {
     const redisHost = process.env.REDIS_HOST || '127.0.0.1';
     const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
 
-    console.log(`Connecting to Redis on ${redisHost}:${redisPort}...`);
 
     this.redisClient = new Redis({
       host: redisHost,
@@ -56,8 +55,8 @@ class ReviewQueueController {
       retryStrategy: (times) => {
         if (times > 1) {
           // If we fail once, we stop retrying and fall back to in-memory mode
-          console.log('Redis connection failed. Falling back to local in-memory queue worker.');
           this.isRedisActive = false;
+
           return null; // Stop retrying
         }
         return 1000;
@@ -65,7 +64,6 @@ class ReviewQueueController {
     });
 
     this.redisClient.on('connect', () => {
-      console.log('Successfully connected to Redis. Initializing BullMQ.');
       this.isRedisActive = true;
       this.bullQueue = new Queue('review-queue', {
         connection: this.redisClient
@@ -75,9 +73,9 @@ class ReviewQueueController {
     this.redisClient.on('error', (err) => {
       // Catch errors silently to prevent application crashes
       if (!this.isRedisActive) {
-        // Log once
-        console.log('Redis offline mode enabled.');
+        // Suppress duplicate error logs
       }
+
     });
   }
 
@@ -91,10 +89,8 @@ class ReviewQueueController {
     
     if (this.isRedisActive && this.bullQueue) {
       await this.bullQueue.add('review-job', data, { jobId });
-      console.log(`BullMQ: Job added with ID ${jobId}`);
     } else {
       this.localQueue.add('review-job', data, { jobId });
-      console.log(`InMemoryQueue: Job added with ID ${jobId}`);
     }
 
     return jobId;

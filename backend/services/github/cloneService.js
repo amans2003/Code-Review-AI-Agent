@@ -96,7 +96,6 @@ const cleanup = (jobId) => {
   if (fs.existsSync(clonePath)) {
     try {
       fs.rmSync(clonePath, { recursive: true, force: true });
-      console.log(`Cleaned up temp path: ${clonePath}`);
     } catch (e) {
       console.error(`Failed to cleanup temp path ${clonePath}:`, e.message);
     }

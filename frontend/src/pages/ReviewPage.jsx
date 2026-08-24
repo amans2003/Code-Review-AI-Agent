@@ -226,7 +226,7 @@ const ReviewPage = () => {
                     rows={12}
                     value={codeContent}
                     onChange={(e) => setCodeContent(e.target.value)}
-                    placeholder={`// Paste your JS, TS, React or Node code here...\n\nfunction processData(val) {\n  var result = eval(val);\n  return result;\n}`}
+                    placeholder={`// Paste your JS, TS, React or Node code here...\n\nfunction processData(input) {\n  // Your code will be analyzed for security, performance,\n  // clean code, and architecture issues.\n  return input;\n}`}
                     className="w-full bg-[#0a0d14] border border-borderDark/60 focus:border-indigo-500 rounded-lg p-4 text-xs text-slate-200 focus:outline-none font-mono transition-colors"
                   />
                 </div>

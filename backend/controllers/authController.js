@@ -9,21 +9,83 @@ const generateToken = (id) => {
 };
 
 /**
- * Handles GitHub OAuth redirect and generates a token for the UI
+ * Login via GitHub Profile URL (no OAuth required)
+ * Accepts { profileUrl } in request body
+ * Calls GitHub public API to fetch user data, then find-or-create in DB
  */
-const githubCallback = async (req, res) => {
+const loginWithGithubUrl = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+    const { profileUrl } = req.body;
+
+    if (!profileUrl || typeof profileUrl !== 'string') {
+      return res.status(400).json({ success: false, message: 'Please provide a valid GitHub profile URL.' });
     }
 
-    const token = generateToken(req.user._id);
-    
-    // Redirect to frontend dashboard with token
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?token=${token}`);
+    // Extract username from URL like https://github.com/username or github.com/username
+    const cleaned = profileUrl.trim().replace(/\/$/, '');
+    const match = cleaned.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
+
+    if (!match || !match[1]) {
+      return res.status(400).json({ success: false, message: 'Could not extract a GitHub username from the provided URL.' });
+    }
+
+    const githubUsername = match[1];
+
+    // Fetch public profile from GitHub API
+    const githubApiRes = await fetch(`https://api.github.com/users/${githubUsername}`, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'CodeReviewAgent/1.0'
+      }
+    });
+
+    if (!githubApiRes.ok) {
+      if (githubApiRes.status === 404) {
+        return res.status(404).json({ success: false, message: `GitHub user "${githubUsername}" not found. Please check the URL.` });
+      }
+      return res.status(502).json({ success: false, message: 'Failed to reach GitHub API. Please try again.' });
+    }
+
+    const githubProfile = await githubApiRes.json();
+
+    // Find or create user in MongoDB
+    let user = await User.findOne({ username: githubProfile.login });
+
+    if (!user) {
+      user = new User({
+        username: githubProfile.login,
+        avatar: githubProfile.avatar_url || '',
+        email: githubProfile.email || ''
+      });
+      await user.save();
+    } else {
+      // Update avatar/email in case they changed
+      user.avatar = githubProfile.avatar_url || user.avatar;
+      user.email = githubProfile.email || user.email;
+      await user.save();
+    }
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        avatar: user.avatar,
+        email: user.email,
+        githubName: githubProfile.name || user.username,
+        bio: githubProfile.bio || '',
+        publicRepos: githubProfile.public_repos || 0,
+        followers: githubProfile.followers || 0,
+        following: githubProfile.following || 0,
+        githubUrl: githubProfile.html_url || `https://github.com/${user.username}`
+      }
+    });
   } catch (error) {
-    console.error('Github Callback Error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=server_error`);
+    console.error('Login With GitHub URL Error:', error);
+    res.status(500).json({ success: false, message: 'Server error during login.' });
   }
 };
 
@@ -32,7 +94,6 @@ const githubCallback = async (req, res) => {
  */
 const demoLogin = async (req, res) => {
   try {
-    // Find or create a demo user
     let user = await User.findOne({ username: 'demo_developer' });
 
     if (!user) {
@@ -53,7 +114,13 @@ const demoLogin = async (req, res) => {
         id: user._id,
         username: user.username,
         avatar: user.avatar,
-        email: user.email
+        email: user.email,
+        githubName: 'Demo Developer',
+        bio: 'Exploring the Code Review Agent',
+        publicRepos: 0,
+        followers: 0,
+        following: 0,
+        githubUrl: 'https://github.com'
       }
     });
   } catch (error) {
@@ -86,7 +153,7 @@ const getMe = async (req, res) => {
 };
 
 module.exports = {
-  githubCallback,
+  loginWithGithubUrl,
   demoLogin,
   getMe
 };

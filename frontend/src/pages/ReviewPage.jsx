@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import LiveConsole from '../components/LiveConsole';
 import { GitBranch, ClipboardList, Send, AlertCircle, Sparkles } from 'lucide-react';
 
 const ReviewPage = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('git'); // 'git' or 'raw'
-  const [repoUrl, setRepoUrl] = useState('');
-  const [repoName, setRepoName] = useState('');
+  const [repoUrl, setRepoUrl] = useState(location.state?.repoUrl || '');
+  const [repoName, setRepoName] = useState(location.state?.repoName || '');
   
   // Raw code paste state
   const [fileName, setFileName] = useState('app.js');
@@ -139,6 +140,13 @@ const ReviewPage = () => {
         </h1>
         <p className="text-xs text-slate-500 mt-1">Audit code files using LLM agents or patterns. Watch progress live below.</p>
       </div>
+
+      {location.state?.repoUrl && !jobId && (
+        <div className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs px-4 py-3 rounded-lg flex items-center space-x-2 animate-fadeIn">
+          <Sparkles className="h-4 w-4 flex-shrink-0 text-indigo-400" />
+          <span>Repository pre-filled from your GitHub profile. Review the URL below and click <strong>Queue Audit Analysis</strong> to start.</span>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs px-4 py-3 rounded-lg flex items-start space-x-2">

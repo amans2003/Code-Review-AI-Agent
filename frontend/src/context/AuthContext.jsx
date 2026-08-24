@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is logged in on mount
+  // Restore session from stored token on mount
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
@@ -19,13 +19,17 @@ export const AuthProvider = ({ children }) => {
       try {
         const res = await api.auth.getMe();
         if (res.success) {
-          setUser(res.user);
+          // Merge stored extended profile if available
+          const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
+          setUser({ ...res.user, ...stored });
         } else {
           localStorage.removeItem('token');
+          localStorage.removeItem('userProfile');
         }
       } catch (err) {
         console.error('Session restoration failed:', err.message);
         localStorage.removeItem('token');
+        localStorage.removeItem('userProfile');
       } finally {
         setLoading(false);
       }
@@ -34,12 +38,56 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  /**
+   * Login by providing a GitHub profile URL.
+   * No OAuth required — uses the GitHub public API.
+   */
+  const loginWithGithubUrl = async (profileUrl) => {
+    setLoading(true);
+    try {
+      const res = await api.auth.loginWithGithubUrl(profileUrl);
+      if (res.success) {
+        localStorage.setItem('token', res.token);
+        // Store extended profile data (bio, stats, etc.)
+        const profile = {
+          githubName: res.user.githubName,
+          bio: res.user.bio,
+          publicRepos: res.user.publicRepos,
+          followers: res.user.followers,
+          following: res.user.following,
+          githubUrl: res.user.githubUrl
+        };
+        localStorage.setItem('userProfile', JSON.stringify(profile));
+        setUser(res.user);
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Authentication failed' };
+    } catch (err) {
+      console.error('Login With GitHub URL failed:', err);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Demo login — instant access without a real GitHub profile
+   */
   const loginWithDemo = async () => {
     setLoading(true);
     try {
       const res = await api.auth.demoLogin();
       if (res.success) {
         localStorage.setItem('token', res.token);
+        const profile = {
+          githubName: res.user.githubName,
+          bio: res.user.bio,
+          publicRepos: res.user.publicRepos,
+          followers: res.user.followers,
+          following: res.user.following,
+          githubUrl: res.user.githubUrl
+        };
+        localStorage.setItem('userProfile', JSON.stringify(profile));
         setUser(res.user);
         return { success: true };
       }
@@ -52,35 +100,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithToken = async (token) => {
-    setLoading(true);
-    try {
-      localStorage.setItem('token', token);
-      const res = await api.auth.getMe();
-      if (res.success) {
-        setUser(res.user);
-        return { success: true };
-      }
-      localStorage.removeItem('token');
-      return { success: false, error: 'Token validation failed' };
-    } catch (err) {
-      localStorage.removeItem('token');
-      return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userProfile');
     setUser(null);
   };
 
   const value = {
     user,
     loading,
+    loginWithGithubUrl,
     loginWithDemo,
-    loginWithToken,
     logout,
     isAuthenticated: !!user
   };

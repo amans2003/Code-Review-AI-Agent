@@ -31,8 +31,15 @@ const request = async (endpoint, options = {}) => {
 
 export const api = {
   auth: {
+    loginWithGithubUrl: (profileUrl) => request('/auth/github-url', {
+      method: 'POST',
+      body: JSON.stringify({ profileUrl })
+    }),
     demoLogin: () => request('/auth/demo', { method: 'POST' }),
     getMe: () => request('/auth/me')
+  },
+  github: {
+    getRepos: (username) => request(`/github/repos/${username}`)
   },
   repos: {
     submit: (payload) => request('/repos', {

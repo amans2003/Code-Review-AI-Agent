@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const User = require('../models/User');
 
 // Helper to generate JWT
@@ -8,10 +9,22 @@ const generateToken = (id) => {
   });
 };
 
+// Shared GitHub API axios headers
+const githubHeaders = () => {
+  const headers = {
+    'Accept': 'application/vnd.github+json',
+    'User-Agent': 'CodeReviewAgent/1.0'
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  return headers;
+};
+
 /**
- * Login via GitHub Profile URL (no OAuth required)
- * Accepts { profileUrl } in request body
- * Calls GitHub public API to fetch user data, then find-or-create in DB
+ * Login via GitHub Profile URL (no OAuth required).
+ * Accepts { profileUrl } in request body, calls GitHub public API,
+ * finds or creates user in MongoDB, returns a JWT.
  */
 const loginWithGithubUrl = async (req, res) => {
   try {
@@ -31,22 +44,26 @@ const loginWithGithubUrl = async (req, res) => {
 
     const githubUsername = match[1];
 
-    // Fetch public profile from GitHub API
-    const githubApiRes = await fetch(`https://api.github.com/users/${githubUsername}`, {
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'CodeReviewAgent/1.0'
+    // Fetch public profile from GitHub API using axios
+    let githubProfile;
+    try {
+      const response = await axios.get(`https://api.github.com/users/${githubUsername}`, {
+        headers: githubHeaders(),
+        timeout: 10000
+      });
+      githubProfile = response.data;
+    } catch (axiosErr) {
+      if (axiosErr.response) {
+        if (axiosErr.response.status === 404) {
+          return res.status(404).json({ success: false, message: `GitHub user "${githubUsername}" not found. Please check the URL.` });
+        }
+        if (axiosErr.response.status === 403) {
+          return res.status(429).json({ success: false, message: 'GitHub API rate limit exceeded. Please try again shortly.' });
+        }
       }
-    });
-
-    if (!githubApiRes.ok) {
-      if (githubApiRes.status === 404) {
-        return res.status(404).json({ success: false, message: `GitHub user "${githubUsername}" not found. Please check the URL.` });
-      }
+      console.error('GitHub API request failed:', axiosErr.message);
       return res.status(502).json({ success: false, message: 'Failed to reach GitHub API. Please try again.' });
     }
-
-    const githubProfile = await githubApiRes.json();
 
     // Find or create user in MongoDB
     let user = await User.findOne({ username: githubProfile.login });

@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 const router = express.Router();
 
 /**
@@ -24,22 +25,29 @@ router.get('/repos/:username', async (req, res) => {
       headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
     }
 
-    const response = await fetch(
-      `https://api.github.com/users/${username}/repos?per_page=100&sort=updated&type=public`,
-      { headers }
-    );
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return res.status(404).json({ success: false, message: `GitHub user "${username}" not found.` });
+    let repos;
+    try {
+      const response = await axios.get(
+        `https://api.github.com/users/${username}/repos`,
+        {
+          params: { per_page: 100, sort: 'updated', type: 'public' },
+          headers,
+          timeout: 10000
+        }
+      );
+      repos = response.data;
+    } catch (axiosErr) {
+      if (axiosErr.response) {
+        if (axiosErr.response.status === 404) {
+          return res.status(404).json({ success: false, message: `GitHub user "${username}" not found.` });
+        }
+        if (axiosErr.response.status === 403) {
+          return res.status(429).json({ success: false, message: 'GitHub API rate limit exceeded. Please try again shortly.' });
+        }
       }
-      if (response.status === 403) {
-        return res.status(429).json({ success: false, message: 'GitHub API rate limit exceeded. Please try again shortly.' });
-      }
+      console.error('GitHub repos fetch failed:', axiosErr.message);
       return res.status(502).json({ success: false, message: 'Failed to fetch repositories from GitHub.' });
     }
-
-    const repos = await response.json();
 
     // Shape the response to include only necessary fields
     const shaped = repos.map((repo) => ({
@@ -47,7 +55,7 @@ router.get('/repos/:username', async (req, res) => {
       name: repo.name,
       fullName: repo.full_name,
       description: repo.description || '',
-      language: repo.language || 'Unknown',
+      language: repo.language || null,
       stars: repo.stargazers_count,
       forks: repo.forks_count,
       isPrivate: repo.private,
@@ -64,7 +72,7 @@ router.get('/repos/:username', async (req, res) => {
       data: shaped
     });
   } catch (error) {
-    console.error('GitHub Repos Fetch Error:', error);
+    console.error('GitHub Repos Route Error:', error);
     res.status(500).json({ success: false, message: 'Server error while fetching GitHub repositories.' });
   }
 });

@@ -9,7 +9,7 @@ const generateToken = (id) => {
   });
 };
 
-// Shared GitHub API axios headers
+// Shared GitHub API headers
 const githubHeaders = () => {
   const headers = {
     'Accept': 'application/vnd.github+json',
@@ -22,69 +22,95 @@ const githubHeaders = () => {
 };
 
 /**
- * Login via GitHub Profile URL (no OAuth required).
- * Accepts { profileUrl } in request body, calls GitHub public API,
- * finds or creates user in MongoDB, returns a JWT.
+ * Login via GitHub Profile URL — no OAuth required.
+ * Body: { profileUrl: "https://github.com/username" }
  */
 const loginWithGithubUrl = async (req, res) => {
   try {
     const { profileUrl } = req.body;
 
+    // ── Step 1: Validate input ─────────────────────────────────────────────
     if (!profileUrl || typeof profileUrl !== 'string') {
-      return res.status(400).json({ success: false, message: 'Please provide a valid GitHub profile URL.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid GitHub profile URL.'
+      });
     }
 
-    // Extract username from URL like https://github.com/username or github.com/username
     const cleaned = profileUrl.trim().replace(/\/$/, '');
     const match = cleaned.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
 
     if (!match || !match[1]) {
-      return res.status(400).json({ success: false, message: 'Could not extract a GitHub username from the provided URL.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Could not extract a GitHub username from the URL. Use format: https://github.com/username'
+      });
     }
 
     const githubUsername = match[1];
+    console.log(`[auth/github-url] Attempting login for GitHub user: ${githubUsername}`);
 
-    // Fetch public profile from GitHub API using axios
+    // ── Step 2: Fetch from GitHub public API ───────────────────────────────
     let githubProfile;
     try {
-      const response = await axios.get(`https://api.github.com/users/${githubUsername}`, {
-        headers: githubHeaders(),
-        timeout: 10000
-      });
+      const response = await axios.get(
+        `https://api.github.com/users/${githubUsername}`,
+        { headers: githubHeaders(), timeout: 10000 }
+      );
       githubProfile = response.data;
+      console.log(`[auth/github-url] GitHub profile fetched: login=${githubProfile.login}`);
     } catch (axiosErr) {
-      if (axiosErr.response) {
-        if (axiosErr.response.status === 404) {
-          return res.status(404).json({ success: false, message: `GitHub user "${githubUsername}" not found. Please check the URL.` });
-        }
-        if (axiosErr.response.status === 403) {
-          return res.status(429).json({ success: false, message: 'GitHub API rate limit exceeded. Please try again shortly.' });
-        }
+      const status = axiosErr.response?.status;
+      console.error(`[auth/github-url] GitHub API error: status=${status}, msg=${axiosErr.message}`);
+
+      if (status === 404) {
+        return res.status(404).json({
+          success: false,
+          message: `GitHub user "${githubUsername}" not found. Please check the URL.`
+        });
       }
-      console.error('GitHub API request failed:', axiosErr.message);
-      return res.status(502).json({ success: false, message: 'Failed to reach GitHub API. Please try again.' });
-    }
-
-    // Find or create user in MongoDB
-    let user = await User.findOne({ username: githubProfile.login });
-
-    if (!user) {
-      user = new User({
-        username: githubProfile.login,
-        avatar: githubProfile.avatar_url || '',
-        email: githubProfile.email || ''
+      if (status === 403) {
+        return res.status(429).json({
+          success: false,
+          message: 'GitHub API rate limit reached. Try again shortly or set GITHUB_TOKEN env variable.'
+        });
+      }
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to reach the GitHub API. Please try again.'
       });
-      await user.save();
-    } else {
-      // Update avatar/email in case they changed
-      user.avatar = githubProfile.avatar_url || user.avatar;
-      user.email = githubProfile.email || user.email;
-      await user.save();
     }
 
+    // ── Step 3: Find or create user (upsert avoids duplicate key races) ────
+    let user;
+    try {
+      user = await User.findOneAndUpdate(
+        { username: githubProfile.login },
+        {
+          $set: {
+            avatar: githubProfile.avatar_url || '',
+            email: githubProfile.email || ''
+          },
+          $setOnInsert: {
+            username: githubProfile.login,
+            createdAt: new Date()
+          }
+        },
+        { upsert: true, new: true, runValidators: true }
+      );
+      console.log(`[auth/github-url] User record ready: id=${user._id}, username=${user.username}`);
+    } catch (dbErr) {
+      console.error('[auth/github-url] Database error:', dbErr.message, dbErr.code);
+      return res.status(500).json({
+        success: false,
+        message: 'Database error while creating user session.'
+      });
+    }
+
+    // ── Step 4: Issue JWT and respond ─────────────────────────────────────
     const token = generateToken(user._id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       token,
       user: {
@@ -100,31 +126,39 @@ const loginWithGithubUrl = async (req, res) => {
         githubUrl: githubProfile.html_url || `https://github.com/${user.username}`
       }
     });
+
   } catch (error) {
-    console.error('Login With GitHub URL Error:', error);
-    res.status(500).json({ success: false, message: 'Server error during login.' });
+    console.error('[auth/github-url] Unexpected error:', error.message, error.stack);
+    return res.status(500).json({
+      success: false,
+      message: 'Unexpected server error during login.'
+    });
   }
 };
 
 /**
- * Generates an instant Developer Demo JWT token
+ * Demo login — instant access without a real GitHub profile
  */
 const demoLogin = async (req, res) => {
   try {
-    let user = await User.findOne({ username: 'demo_developer' });
-
-    if (!user) {
-      user = new User({
-        username: 'demo_developer',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100&q=80',
-        email: 'developer@example.com'
-      });
-      await user.save();
-    }
+    const user = await User.findOneAndUpdate(
+      { username: 'demo_developer' },
+      {
+        $set: {
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100&q=80',
+          email: 'developer@example.com'
+        },
+        $setOnInsert: {
+          username: 'demo_developer',
+          createdAt: new Date()
+        }
+      },
+      { upsert: true, new: true }
+    );
 
     const token = generateToken(user._id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       token,
       user: {
@@ -141,20 +175,20 @@ const demoLogin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Demo Login Error:', error);
-    res.status(500).json({ success: false, message: 'Server error during demo login' });
+    console.error('[auth/demo] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error during demo login.' });
   }
 };
 
 /**
- * Retrieves profile of logged-in user
+ * Retrieves profile of the logged-in user (JWT-protected)
  */
 const getMe = async (req, res) => {
   try {
     if (!req.user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       user: {
         id: req.user._id,
@@ -164,8 +198,8 @@ const getMe = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('GetMe Error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('[auth/me] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 

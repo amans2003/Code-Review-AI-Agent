@@ -1,14 +1,10 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-  githubId: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
   username: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   avatar: {
     type: String,
